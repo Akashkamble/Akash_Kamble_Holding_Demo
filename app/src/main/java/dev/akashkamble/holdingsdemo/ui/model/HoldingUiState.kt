@@ -6,10 +6,15 @@ import dev.akashkamble.holdingsdemo.domain.model.Holding
 
 @Immutable
 data class HoldingsUiState(
-    val holdings: List<Holding> = emptyList(),
-    val isLoading: Boolean = true,
+    val data: HoldingData = HoldingData(),
+    val isLoading: Boolean = false,
     val error: String? = null,
-    val isExpanded: Boolean = false
+)
+
+@Immutable
+data class HoldingData(
+    val holdings: List<Holding> = emptyList(),
+    val isSummaryExpanded: Boolean = false
 ) {
     val portfolioSummary: PortfolioSummary
         get() {

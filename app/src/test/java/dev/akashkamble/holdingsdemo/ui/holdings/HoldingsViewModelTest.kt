@@ -1,5 +1,6 @@
 package dev.akashkamble.holdingsdemo.ui.holdings
 
+import android.util.Log
 import dev.akashkamble.holdingsdemo.fake.FakeHoldingsRepo
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.Dispatchers
@@ -15,10 +16,13 @@ import app.cash.turbine.test
 import dev.akashkamble.holdingsdemo.domain.result.Result
 import dev.akashkamble.holdingsdemo.ui.holdings.viewmodel.HoldingsViewModel
 import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockkStatic
 import io.mockk.spyk
 import junit.framework.TestCase.assertEquals
+import kotlinx.coroutines.flow.flow
 import org.junit.Assert.assertFalse
-import kotlin.time.Duration.Companion.seconds
+import org.junit.Assert.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HoldingsViewModelTest {
@@ -31,6 +35,8 @@ class HoldingsViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
+        mockkStatic(Log::class)
+        every { Log.d(any(), any(), any()) } returns 0
         repo = spyk(FakeHoldingsRepo())
         viewModel = HoldingsViewModel(repo = repo, ioDispatcher = testDispatcher)
     }
@@ -50,21 +56,23 @@ class HoldingsViewModelTest {
         )
 
         viewModel.uiState.test {
+            // Loading emission
             val loadingState = awaitItem()
             testDispatcher.scheduler.advanceUntilIdle()
+
+            // Data emission
             val loadState = awaitItem()
             assertTrue(loadingState.isLoading)
             assertFalse(loadState.isLoading)
-            assertEquals(3, loadState.holdings.size)
+            assertEquals(3, loadState.data.holdings.size)
         }
     }
 
     @Test
     fun `should fetch holdings on init and update uistate with error`() = runTest {
-        // Given
-        coEvery {
-            repo.getHoldings()
-        } returns Result.Error("Network Error")
+
+        coEvery { repo.refreshHoldings() } returns Result.Error("Network Error")
+        every { repo.observeHoldings() } returns flow { emit(emptyList()) }
 
         viewModel = HoldingsViewModel(
             repo = repo,
@@ -72,15 +80,24 @@ class HoldingsViewModelTest {
         )
 
         viewModel.uiState.test {
-            val loadingState = awaitItem()
-            testDispatcher.scheduler.advanceUntilIdle()
-            val loadState = awaitItem()
-            assertTrue(loadingState.isLoading)
-            assertFalse(loadState.isLoading)
-            assertEquals(0, loadState.holdings.size)
-            assertEquals("Network Error", loadState.error)
+
+            // Loading emission
+            val loading = awaitItem()
+            assertTrue(loading.isLoading)
+
+            // DB emission
+            val db = awaitItem()
+            assertFalse(db.isLoading)
+            assertEquals(0, db.data.holdings.size)
+            assertNull(db.error)
+
+            // Error emission
+            val error = awaitItem()
+            assertFalse(error.isLoading)
+            assertEquals("Network Error", error.error)
         }
     }
+
 
 
 }

@@ -1,12 +1,13 @@
 package dev.akashkamble.holdingsdemo.ui.holdings.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.akashkamble.holdingsdemo.di.IoDispatcher
 import dev.akashkamble.holdingsdemo.domain.repo.HoldingsRepo
 import dev.akashkamble.holdingsdemo.domain.result.Result
+import dev.akashkamble.holdingsdemo.ui.holdings.HoldingsScreenAction
+import dev.akashkamble.holdingsdemo.ui.model.HoldingData
 import dev.akashkamble.holdingsdemo.ui.model.HoldingsUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,42 +22,64 @@ class HoldingsViewModel @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
-    private val TAG = HoldingsViewModel::class.java.simpleName
     private val _uiState = MutableStateFlow(HoldingsUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
+        getHoldings()
+    }
+
+    private fun getHoldings() {
+        _uiState.update {
+            it.copy(isLoading = true, error = null)
+        }
+
         viewModelScope.launch(ioDispatcher) {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = repo.getHoldings()
-            when(result){
-                is Result.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            error = result.error,
-                            isLoading = false
-                        )
-                    }
+            repo.observeHoldings().collect { holdings ->
+                _uiState.update {
+                    it.copy(
+                        data = HoldingData(holdings),
+                        isLoading = false,
+                        error = it.error
+                    )
                 }
-                is Result.Success -> {
-                    _uiState.update {
-                        it.copy(
-                            holdings = result.data,
-                            isLoading = false
-                        )
-                    }
+            }
+        }
+        viewModelScope.launch(ioDispatcher) {
+            val result = repo.refreshHoldings()
+            if (result is Result.Error) {
+                _uiState.update {
+                    it.copy(
+                        error = result.error,
+                        isLoading = false
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        error = null
+                    )
                 }
             }
         }
     }
 
-    fun onToggleExpand() {
-        _uiState.update {
-            it.copy(isExpanded = !it.isExpanded)
+    fun handleActions(action: HoldingsScreenAction) {
+        when (action) {
+            HoldingsScreenAction.RetryEvent -> {
+                getHoldings()
+            }
+
+            HoldingsScreenAction.ToggleSummaryEvent -> {
+                onToggleSummaryUi()
+            }
         }
     }
 
-    private fun log(message: String) {
-        Log.d(TAG, message)
+    private fun onToggleSummaryUi() {
+        _uiState.update {
+            val holdingData = it.data
+            it.copy(holdingData.copy(isSummaryExpanded = !holdingData.isSummaryExpanded))
+        }
     }
 }
