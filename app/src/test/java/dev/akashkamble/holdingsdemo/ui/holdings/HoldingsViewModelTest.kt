@@ -15,6 +15,7 @@ import org.junit.Test
 import app.cash.turbine.test
 import dev.akashkamble.holdingsdemo.domain.result.Result
 import dev.akashkamble.holdingsdemo.ui.holdings.viewmodel.HoldingsViewModel
+import dev.akashkamble.holdingsdemo.ui.model.HoldingsUiState
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkStatic
@@ -97,6 +98,68 @@ class HoldingsViewModelTest {
             assertEquals("Network Error", error.error)
         }
     }
+
+    @Test
+    fun `should toggle summary expanded state`() = runTest {
+        // Initial state: isSummaryExpanded = false
+        viewModel.uiState.test {
+            val initial = awaitItem()
+            assertFalse(initial.data.isSummaryExpanded)
+
+            viewModel.handleActions(HoldingsScreenAction.ToggleSummaryEvent)
+            val toggled = awaitItem()
+            assertTrue(toggled.data.isSummaryExpanded)
+
+            viewModel.handleActions(HoldingsScreenAction.ToggleSummaryEvent)
+            val toggledBack = awaitItem()
+            assertFalse(toggledBack.data.isSummaryExpanded)
+        }
+    }
+
+    @Test
+    fun `should handle empty holdings list`() = runTest {
+        every { repo.observeHoldings() } returns flow { emit(emptyList()) }
+        coEvery { repo.refreshHoldings() } returns Result.Success(Unit)
+
+        viewModel = HoldingsViewModel(repo = repo, ioDispatcher = testDispatcher)
+
+        viewModel.uiState.test {
+            awaitItem() // loading
+            val state = awaitItem()
+            assertEquals(0, state.data.holdings.size)
+            assertFalse(state.isLoading)
+            assertNull(state.error)
+        }
+    }
+
+    @Test
+    fun `should clear error on successful refresh after error`() = runTest {
+        coEvery { repo.refreshHoldings() } returnsMany listOf(
+            Result.Error("Some Error"),
+            Result.Success(Unit)
+        )
+        every { repo.observeHoldings() } returns flow { emit(emptyList()) }
+
+        viewModel = HoldingsViewModel(repo = repo, ioDispatcher = testDispatcher)
+
+        viewModel.uiState.test {
+            awaitItem() // loading
+            awaitItem() // db emission
+            val error = awaitItem()
+            assertEquals("Some Error", error.error)
+
+            // Retry
+            viewModel.handleActions(HoldingsScreenAction.RetryEvent)
+            testDispatcher.scheduler.advanceUntilIdle()
+
+            // Collect all remaining emissions after retry
+            val emissions = mutableListOf<HoldingsUiState>()
+            repeat(2) { emissions.add(awaitItem()) }
+            val afterRetry = emissions.last()
+            assertNull(afterRetry.error)
+        }
+    }
+
 
 
 
