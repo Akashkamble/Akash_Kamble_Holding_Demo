@@ -23,6 +23,8 @@ import dev.akashkamble.holdingsdemo.ui.theme.AppColors
 import kotlin.math.abs
 import java.text.DecimalFormat
 
+val formatter = DecimalFormat("#,##,##0.00")
+
 @Composable
 fun HoldingItem(
     holding: Holding,
@@ -106,7 +108,6 @@ fun HoldingItem(
 
 fun formatCurrency(value: Double): String {
     val sign = if (value < 0) "-" else ""
-    val formatter = DecimalFormat("#,##,##0.00")
     val formattedValue = formatter.format(abs(value))
     return buildString {
         append(sign)
