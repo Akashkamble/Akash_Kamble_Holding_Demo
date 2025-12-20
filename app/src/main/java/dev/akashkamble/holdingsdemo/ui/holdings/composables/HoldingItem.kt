@@ -126,7 +126,7 @@ private fun HoldingItemProfitPreview() {
     ) {
         HoldingItem(
             holding = Holding(
-                symbol = "AAPL",
+                symbol = "TCS",
                 quantity = 10,
                 avgPrice = 150.0,
                 ltp = 155.0,
@@ -146,7 +146,7 @@ private fun HoldingItemLossPreview() {
     ) {
         HoldingItem(
             holding = Holding(
-                symbol = "AAPL",
+                symbol = "TCS",
                 quantity = 10,
                 avgPrice = 150.0,
                 ltp = 145.0,

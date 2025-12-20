@@ -1,5 +1,8 @@
 package dev.akashkamble.holdingsdemo.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class Holding(
     val symbol: String,
     val quantity: Int,
@@ -16,7 +19,12 @@ data class Holding(
     val pnl: Double
         get() = currentValue - investedAmount
 
+    /**
+     * This is not according to given PRD.
+     * In PRD day PnL is calculated as (closePrice - tlp) * Quantity
+     * But actually it should be (ltp - closePrice) * Quantity to reflect profit or loss for the day.
+     */
     val dayPnl: Double
-        get() = (closePrice - ltp) * quantity
+        get() = (ltp - closePrice) * quantity
 }
 

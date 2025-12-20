@@ -5,10 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.LayoutDirection
 import dagger.hilt.android.AndroidEntryPoint
 import dev.akashkamble.holdingsdemo.ui.holdings.composables.HoldingScreen
 import dev.akashkamble.holdingsdemo.ui.holdings.viewmodel.HoldingsViewModel
@@ -25,7 +28,11 @@ class HoldingsActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     HoldingScreen(
                         viewModel = viewModel,
-                        modifier = Modifier.padding(top = innerPadding.calculateTopPadding())
+                        modifier = Modifier.padding(
+                            top = innerPadding.calculateTopPadding(),
+                            start = innerPadding.calculateStartPadding(layoutDirection = LayoutDirection.Ltr),
+                            end = innerPadding.calculateEndPadding(layoutDirection = LayoutDirection.Ltr)
+                        )
                     )
                 }
             }

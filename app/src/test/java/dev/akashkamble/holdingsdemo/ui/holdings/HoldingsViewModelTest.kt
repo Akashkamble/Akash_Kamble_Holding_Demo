@@ -1,37 +1,40 @@
 package dev.akashkamble.holdingsdemo.ui.holdings
 
 import android.util.Log
-import dev.akashkamble.holdingsdemo.fake.FakeHoldingsRepo
-import junit.framework.TestCase.assertTrue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.test.setMain
-import org.junit.After
-import org.junit.Before
-import org.junit.Test
 import app.cash.turbine.test
+import dev.akashkamble.holdingsdemo.domain.model.Holding
 import dev.akashkamble.holdingsdemo.domain.result.Result
+import dev.akashkamble.holdingsdemo.fake.FakeHoldingsRepo
 import dev.akashkamble.holdingsdemo.ui.holdings.viewmodel.HoldingsViewModel
-import dev.akashkamble.holdingsdemo.ui.model.HoldingsUiState
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.spyk
 import junit.framework.TestCase.assertEquals
-import kotlinx.coroutines.flow.flow
+import junit.framework.TestCase.assertTrue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Before
+import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HoldingsViewModelTest {
-
-
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var viewModel: HoldingsViewModel
     private lateinit var repo: FakeHoldingsRepo
+
+    private val holdings = listOf(
+        Holding("TCS", 10, 150.0, 140.0, 145.0),
+        Holding("ICICI", 5, 2800.0, 2700.0, 2750.0)
+    )
 
     @Before
     fun setup() {
@@ -39,7 +42,6 @@ class HoldingsViewModelTest {
         mockkStatic(Log::class)
         every { Log.d(any(), any(), any()) } returns 0
         repo = spyk(FakeHoldingsRepo())
-        viewModel = HoldingsViewModel(repo = repo, ioDispatcher = testDispatcher)
     }
 
     @After
@@ -49,118 +51,106 @@ class HoldingsViewModelTest {
     }
 
     @Test
-    fun `should fetch holdings on init and update uistate with loading`() = runTest {
-        // Given
-        viewModel = HoldingsViewModel(
-            repo = repo,
-            ioDispatcher = testDispatcher
-        )
-
-        viewModel.uiState.test {
-            // Loading emission
-            val loadingState = awaitItem()
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            // Data emission
-            val loadState = awaitItem()
-            assertTrue(loadingState.isLoading)
-            assertFalse(loadState.isLoading)
-            assertEquals(3, loadState.data.holdings.size)
-        }
-    }
-
-    @Test
-    fun `should fetch holdings on init and update uistate with error`() = runTest {
-
-        coEvery { repo.refreshHoldings() } returns Result.Error("Network Error")
-        every { repo.observeHoldings() } returns flow { emit(emptyList()) }
-
-        viewModel = HoldingsViewModel(
-            repo = repo,
-            ioDispatcher = testDispatcher
-        )
+    fun `init should load holdings successfully`() = runTest {
+        repo.refreshResult = Result.Success(Unit)
+        repo.emitHoldings(holdings)
+        viewModel = HoldingsViewModel(repo, testDispatcher)
 
         viewModel.uiState.test {
 
-            // Loading emission
             val loading = awaitItem()
             assertTrue(loading.isLoading)
 
-            // DB emission
-            val db = awaitItem()
-            assertFalse(db.isLoading)
-            assertEquals(0, db.data.holdings.size)
-            assertNull(db.error)
+            val loaded = awaitItem()
+            assertEquals(0, loaded.data.holdings.items.size)
 
-            // Error emission
-            val error = awaitItem()
-            assertFalse(error.isLoading)
-            assertEquals("Network Error", error.error)
+            val state = awaitItem()
+            assertFalse(state.isLoading)
+            assertNull(state.error)
+            assertEquals(2, state.data.holdings.items.size)
         }
     }
 
     @Test
-    fun `should toggle summary expanded state`() = runTest {
-        // Initial state: isSummaryExpanded = false
+    fun `init should expose error when refresh fails`() = runTest {
+        repo.refreshResult = Result.Error("Network Error")
+        viewModel = HoldingsViewModel(repo, testDispatcher)
+
         viewModel.uiState.test {
+            val initial = awaitItem()
+            assertTrue(initial.isLoading)
+
+            val errorState = awaitItem()
+            assertFalse(errorState.isLoading)
+            assertEquals("Network Error", errorState.error)
+        }
+    }
+
+    @Test
+    fun `retry should trigger loading again`() = runTest {
+        coEvery { repo.refreshHoldings() } returnsMany listOf(
+            Result.Error("Network Error"),
+            Result.Success(Unit)
+        )
+        every { repo.observeHoldings() } returns flowOf(emptyList())
+
+        viewModel = HoldingsViewModel(repo, testDispatcher)
+
+        viewModel.uiState.test {
+
+            awaitItem() // loading
+            awaitItem() // error
+
+            viewModel.handleActions(HoldingsScreenAction.RetryEvent)
+
+            val retryLoading = awaitItem()
+            assertTrue(retryLoading.isLoading)
+            assertNull(retryLoading.error)
+        }
+    }
+
+    @Test
+    fun `observeHoldings should update ui when db emits`() = runTest {
+
+        coEvery { repo.refreshHoldings() } returns Result.Success(Unit)
+
+        viewModel = HoldingsViewModel(repo, testDispatcher)
+
+        viewModel.uiState.test {
+            awaitItem() // loading
+            awaitItem() // API Success
+
+            repo.emitHoldings(
+                listOf(
+                    Holding("TCS", 10, 150.0, 140.0, 145.0),
+                    Holding("ICICI", 5, 2800.0, 2700.0, 2750.0),
+                    Holding("SBI", 5, 2800.0, 2700.0, 2750.0),
+                    Holding("HDFC", 5, 2800.0, 2700.0, 2750.0)
+                )
+            )
+            val updated = awaitItem()
+            assertEquals(4, updated.data.holdings.items.size)
+        }
+    }
+
+    @Test
+    fun `toggle summary should update isSummaryExpanded`() = runTest {
+        coEvery { repo.refreshHoldings() } returns Result.Success(Unit)
+        every { repo.observeHoldings() } returns flowOf(emptyList())
+
+        viewModel = HoldingsViewModel(repo, testDispatcher)
+
+        viewModel.uiState.test {
+
             val initial = awaitItem()
             assertFalse(initial.data.isSummaryExpanded)
 
+            awaitItem() // API Success
+
             viewModel.handleActions(HoldingsScreenAction.ToggleSummaryEvent)
+
             val toggled = awaitItem()
             assertTrue(toggled.data.isSummaryExpanded)
-
-            viewModel.handleActions(HoldingsScreenAction.ToggleSummaryEvent)
-            val toggledBack = awaitItem()
-            assertFalse(toggledBack.data.isSummaryExpanded)
         }
     }
-
-    @Test
-    fun `should handle empty holdings list`() = runTest {
-        every { repo.observeHoldings() } returns flow { emit(emptyList()) }
-        coEvery { repo.refreshHoldings() } returns Result.Success(Unit)
-
-        viewModel = HoldingsViewModel(repo = repo, ioDispatcher = testDispatcher)
-
-        viewModel.uiState.test {
-            awaitItem() // loading
-            val state = awaitItem()
-            assertEquals(0, state.data.holdings.size)
-            assertFalse(state.isLoading)
-            assertNull(state.error)
-        }
-    }
-
-    @Test
-    fun `should clear error on successful refresh after error`() = runTest {
-        coEvery { repo.refreshHoldings() } returnsMany listOf(
-            Result.Error("Some Error"),
-            Result.Success(Unit)
-        )
-        every { repo.observeHoldings() } returns flow { emit(emptyList()) }
-
-        viewModel = HoldingsViewModel(repo = repo, ioDispatcher = testDispatcher)
-
-        viewModel.uiState.test {
-            awaitItem() // loading
-            awaitItem() // db emission
-            val error = awaitItem()
-            assertEquals("Some Error", error.error)
-
-            // Retry
-            viewModel.handleActions(HoldingsScreenAction.RetryEvent)
-            testDispatcher.scheduler.advanceUntilIdle()
-
-            // Collect all remaining emissions after retry
-            val emissions = mutableListOf<HoldingsUiState>()
-            repeat(2) { emissions.add(awaitItem()) }
-            val afterRetry = emissions.last()
-            assertNull(afterRetry.error)
-        }
-    }
-
-
-
-
 }

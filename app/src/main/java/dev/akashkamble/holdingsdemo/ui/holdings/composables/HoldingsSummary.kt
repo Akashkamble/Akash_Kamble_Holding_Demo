@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,7 +47,7 @@ fun HoldingsSummary(
             .fillMaxWidth()
             .clip(shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
             .background(color = MaterialTheme.colorScheme.secondaryContainer)
-            .padding(bottom = 16.dp)
+            .navigationBarsPadding()
             .animateContentSize(
                 animationSpec = spring(
                     stiffness = Spring.StiffnessMediumLow

@@ -15,11 +15,11 @@ fun HoldingScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     when {
-        state.isLoading -> {
+        state.showLoading -> {
             HoldingsLoading(modifier = modifier)
         }
 
-        state.data.holdings.isEmpty() && state.error != null -> {
+        state.showError -> {
             HoldingsError(
                 errorMessage = state.error ?: "An unexpected error occurred.",
                 modifier = modifier,

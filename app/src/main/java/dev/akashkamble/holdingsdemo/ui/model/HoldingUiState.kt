@@ -9,19 +9,25 @@ data class HoldingsUiState(
     val data: HoldingData = HoldingData(),
     val isLoading: Boolean = false,
     val error: String? = null,
-)
+) {
+    val showError: Boolean
+        get() = data.holdings.items.isEmpty() && error != null
+
+    val showLoading: Boolean
+        get() = isLoading && data.holdings.items.isEmpty()
+}
 
 @Immutable
 data class HoldingData(
-    val holdings: List<Holding> = emptyList(),
+    val holdings: ImmutableList<Holding> = ImmutableList(),
     val isSummaryExpanded: Boolean = false
 ) {
     val portfolioSummary: PortfolioSummary
         get() {
-            val currentValue = holdings.sumOf { it.currentValue }
-            val investment = holdings.sumOf { it.investedAmount }
+            val currentValue = holdings.items.sumOf { holding -> holding.currentValue }
+            val investment = holdings.items.sumOf { holding -> holding.investedAmount }
             val totalPnl = currentValue - investment
-            val todayPnl = holdings.sumOf { it.dayPnl }
+            val todayPnl = holdings.items.sumOf { holding -> holding.dayPnl }
             return PortfolioSummary(
                 currentValue = currentValue,
                 investment = investment,
@@ -30,6 +36,13 @@ data class HoldingData(
             )
         }
 }
+
+// Wrapper class to make List immutable for Compose
+// Refer https://developer.android.com/develop/ui/compose/performance/stability/fix#wrapper
+@Immutable
+data class ImmutableList<T>(
+    val items: List<T> = emptyList()
+)
 
 @Immutable
 data class PortfolioSummary(

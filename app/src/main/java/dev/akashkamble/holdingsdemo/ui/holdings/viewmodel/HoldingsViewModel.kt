@@ -9,6 +9,7 @@ import dev.akashkamble.holdingsdemo.domain.result.Result
 import dev.akashkamble.holdingsdemo.ui.holdings.HoldingsScreenAction
 import dev.akashkamble.holdingsdemo.ui.model.HoldingData
 import dev.akashkamble.holdingsdemo.ui.model.HoldingsUiState
+import dev.akashkamble.holdingsdemo.ui.model.ImmutableList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,6 +28,19 @@ class HoldingsViewModel @Inject constructor(
 
     init {
         getHoldings()
+        observeHoldings()
+    }
+
+    private fun observeHoldings() {
+        viewModelScope.launch(ioDispatcher) {
+            repo.observeHoldings().collect { holdings ->
+                _uiState.update {
+                    it.copy(
+                        data = HoldingData(ImmutableList(holdings)),
+                    )
+                }
+            }
+        }
     }
 
     private fun getHoldings() {
@@ -34,17 +48,6 @@ class HoldingsViewModel @Inject constructor(
             it.copy(isLoading = true, error = null)
         }
 
-        viewModelScope.launch(ioDispatcher) {
-            repo.observeHoldings().collect { holdings ->
-                _uiState.update {
-                    it.copy(
-                        data = HoldingData(holdings),
-                        isLoading = false,
-                        error = it.error
-                    )
-                }
-            }
-        }
         viewModelScope.launch(ioDispatcher) {
             val result = repo.refreshHoldings()
             if (result is Result.Error) {
@@ -57,6 +60,7 @@ class HoldingsViewModel @Inject constructor(
             } else {
                 _uiState.update {
                     it.copy(
+                        isLoading = false,
                         error = null
                     )
                 }
