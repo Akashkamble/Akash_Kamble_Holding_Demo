@@ -15,7 +15,7 @@ import dev.akashkamble.holdingsdemo.ui.model.HoldingData
 import dev.akashkamble.holdingsdemo.ui.model.ImmutableList
 
 @Composable
-fun HoldingsContent(
+fun HoldingsDataContent(
     data: HoldingData,
     modifier: Modifier = Modifier,
     onToggle: () -> Unit
@@ -55,7 +55,7 @@ private fun HoldingsList(
 @Composable
 private fun HoldingsContentPreview() {
     Box(modifier = Modifier.fillMaxSize()) {
-        HoldingsContent(
+        HoldingsDataContent(
             data = HoldingData(
                 holdings = sampleHoldings,
                 isSummaryExpanded = false

@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import dev.akashkamble.holdingsdemo.domain.model.Holding
@@ -54,12 +55,14 @@ fun HoldingItem(
                 text = "LTP",
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+                ),
+                modifier = Modifier.testTag("ltp_${holding.symbol}")
             )
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 formatCurrency(holding.ltp),
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.testTag("ltp_value_${holding.symbol}")
             )
 
         }
@@ -76,25 +79,29 @@ fun HoldingItem(
                 text = "NET QTY",
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+                ),
+                modifier = Modifier.testTag("net_qty_${holding.symbol}")
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "${holding.quantity}",
-                style = MaterialTheme.typography.labelSmall
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.testTag("net_qty_value_${holding.symbol}")
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "P&L",
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+                ),
+                modifier = Modifier.testTag("pnl_${holding.symbol}")
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = formatCurrency(holding.pnl),
                 color = pnlColor,
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.testTag("pnl_value_${holding.symbol}")
             )
         }
         Spacer(modifier = Modifier.height(10.dp))

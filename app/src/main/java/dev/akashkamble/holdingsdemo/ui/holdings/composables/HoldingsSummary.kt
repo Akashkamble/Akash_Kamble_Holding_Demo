@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -109,7 +110,8 @@ fun SummaryHeader(
         Column {
             Text(
                 text = "Total P&L",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.testTag("total_pnl_label")
             )
 
             Text(
@@ -117,13 +119,14 @@ fun SummaryHeader(
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontSize = 16.sp,
                     color = pnlColor
-                )
+                ),
+                modifier = Modifier.testTag("total_pnl_value")
             )
         }
 
         Icon(
             painter = painterResource(R.drawable.ic_arrow_up),
-            contentDescription = null,
+            contentDescription = "Expand/Collapse Holdings Summery",
             modifier = Modifier.rotate(arrowRotation),
         )
     }
@@ -142,13 +145,18 @@ private fun SummaryRow(
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.testTag("summary_label_$label")
+        )
 
         Text(
             text = formatCurrency(value),
             style = MaterialTheme.typography.labelLarge.copy(
                 color = color
-            )
+            ),
+            modifier = Modifier.testTag("summary_value_$label")
         )
     }
 }
