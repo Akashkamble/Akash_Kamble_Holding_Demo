@@ -11,6 +11,10 @@
 
 ```
 ├──src
+|   ├── androidTest
+|   |   ├── java
+|   |   |   ├── holdingdemo
+|   |   |   |   ├── holdings (UI Tests and Test Robot)
 |   ├── main
 |   |   ├── java
 |   |   |   ├── holdingdemo
